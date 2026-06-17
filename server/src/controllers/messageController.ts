@@ -2,7 +2,6 @@ import { Response } from 'express';
 import Message from '../models/Message';
 import User from '../models/User';
 import { AuthRequest } from '../middleware/auth';
-import mongoose from 'mongoose';
 
 // Get messages between current user and partner
 export const getChatMessages = async (req: AuthRequest, res: Response) => {

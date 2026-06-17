@@ -15,6 +15,7 @@ API.interceptors.request.use((config) => {
 
 // Helper function to get collaboration requests for an entrepreneur
 export const getRequestsForEntrepreneur = async (_entrepreneurId: string): Promise<CollaborationRequest[]> => {
+  void _entrepreneurId;
   try {
     const { data } = await API.get('/collaborations');
     return data.requests.map((req: any) => ({
@@ -34,6 +35,7 @@ export const getRequestsForEntrepreneur = async (_entrepreneurId: string): Promi
 
 // Helper function to get collaboration requests sent by an investor
 export const getRequestsFromInvestor = async (_investorId: string): Promise<CollaborationRequest[]> => {
+  void _investorId;
   try {
     const { data } = await API.get('/collaborations');
     return data.requests.map((req: any) => ({

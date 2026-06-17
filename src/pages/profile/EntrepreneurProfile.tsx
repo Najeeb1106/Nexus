@@ -13,26 +13,9 @@ import { Entrepreneur } from '../../types';
 export const EntrepreneurProfile: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { user: currentUser } = useAuth();
-  
-  // Fetch entrepreneur data
   const entrepreneur = findUserById(id || '') as Entrepreneur | null;
-  
-  if (!entrepreneur || entrepreneur.role !== 'entrepreneur') {
-    return (
-      <div className="text-center py-12">
-        <h2 className="text-2xl font-bold text-gray-900">Entrepreneur not found</h2>
-        <p className="text-gray-600 mt-2">The entrepreneur profile you're looking for doesn't exist or has been removed.</p>
-        <Link to="/dashboard/investor">
-          <Button variant="outline" className="mt-4">Back to Dashboard</Button>
-        </Link>
-      </div>
-    );
-  }
-  
-  const isCurrentUser = currentUser?.id === entrepreneur.id;
-  const isInvestor = currentUser?.role === 'investor';
-  
   const [hasRequestedCollaboration, setHasRequestedCollaboration] = React.useState(false);
+  const isInvestor = currentUser?.role === 'investor';
 
   React.useEffect(() => {
     if (isInvestor && currentUser && id) {
@@ -47,6 +30,20 @@ export const EntrepreneurProfile: React.FC = () => {
       });
     }
   }, [isInvestor, currentUser, id]);
+  
+  if (!entrepreneur || entrepreneur.role !== 'entrepreneur') {
+    return (
+      <div className="text-center py-12">
+        <h2 className="text-2xl font-bold text-gray-900">Entrepreneur not found</h2>
+        <p className="text-gray-600 mt-2">The entrepreneur profile you're looking for doesn't exist or has been removed.</p>
+        <Link to="/dashboard/investor">
+          <Button variant="outline" className="mt-4">Back to Dashboard</Button>
+        </Link>
+      </div>
+    );
+  }
+  
+  const isCurrentUser = currentUser?.id === entrepreneur.id;
   
   const handleSendRequest = async () => {
     if (isInvestor && currentUser && id) {

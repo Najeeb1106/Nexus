@@ -1,59 +1,44 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { User, UserRole, AuthContextType } from '../types';
 import toast from 'react-hot-toast';
-import axios from 'axios';
+import API from '../lib/api';
 
 // Create Auth Context
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Local storage keys
 const USER_STORAGE_KEY = 'business_nexus_user';
-const RESET_TOKEN_KEY = 'business_nexus_reset_token';
-
-// API Axios Instance
-const API = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
-});
-
-// Auto-inject JWT token into requests if it exists in localStorage
-API.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
-
-// Helper mapper to bridge DB schema changes (avatar) to existing frontend type (avatarUrl)
-const mapUser = (apiUser: any): User => {
-  return {
-    id: apiUser.id || apiUser._id,
-    name: apiUser.name,
-    email: apiUser.email,
-    role: apiUser.role,
-    avatarUrl: apiUser.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(apiUser.name)}&background=random`,
-    bio: apiUser.bio || '',
-    createdAt: apiUser.createdAt || new Date().toISOString()
-  };
-};
 
 // Auth Provider Component
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Check for stored user on initial load
+  // Check for stored user on initial load and verify with backend
   useEffect(() => {
-    const storedUser = localStorage.getItem(USER_STORAGE_KEY);
-    const storedToken = localStorage.getItem('token');
-    
-    if (storedUser && storedToken) {
-      setUser(JSON.parse(storedUser));
-    } else {
-      localStorage.removeItem(USER_STORAGE_KEY);
-      localStorage.removeItem('token');
-    }
-    setIsLoading(false);
+    const initAuth = async () => {
+      const token = localStorage.getItem('token');
+      const storedUser = localStorage.getItem(USER_STORAGE_KEY);
+      
+      if (token && storedUser) {
+        setUser(JSON.parse(storedUser));
+        try {
+          const { data } = await API.get('/auth/me');
+          setUser(data.user);
+          localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(data.user));
+        } catch {
+          localStorage.removeItem('token');
+          localStorage.removeItem(USER_STORAGE_KEY);
+          setUser(null);
+        }
+      } else {
+        localStorage.removeItem('token');
+        localStorage.removeItem(USER_STORAGE_KEY);
+        setUser(null);
+      }
+      setIsLoading(false);
+    };
+    initAuth();
   }, []);
 
   // Real login function making an API call
@@ -64,10 +49,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (data.user.role !== role) {
         throw new Error(`User is registered as ${data.user.role}, not ${role}`);
       }
-      const mapped = mapUser(data.user);
       localStorage.setItem('token', data.token);
-      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(mapped));
-      setUser(mapped);
+      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(data.user));
+      setUser(data.user);
       toast.success('Successfully logged in!');
     } catch (error: any) {
       const msg = error.response?.data?.message || error.message || 'Login failed';
@@ -83,10 +67,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(true);
     try {
       const { data } = await API.post('/auth/register', { name, email, password, role });
-      const mapped = mapUser(data.user);
       localStorage.setItem('token', data.token);
-      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(mapped));
-      setUser(mapped);
+      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(data.user));
+      setUser(data.user);
       toast.success('Account created successfully!');
     } catch (error: any) {
       const msg = error.response?.data?.message || error.message || 'Registration failed';
@@ -100,10 +83,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Real forgot password function
   const forgotPassword = async (email: string): Promise<void> => {
     try {
-      const { data } = await API.post('/auth/forgot-password', { email });
-      if (data.resetToken) {
-        localStorage.setItem(RESET_TOKEN_KEY, data.resetToken);
-      }
+      await API.post('/auth/forgot-password', { email });
       toast.success('Password reset instructions generated');
     } catch (error: any) {
       const msg = error.response?.data?.message || error.message || 'Forgot password failed';
@@ -116,7 +96,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const resetPassword = async (token: string, newPassword: string): Promise<void> => {
     try {
       await API.post(`/auth/reset-password/${token}`, { password: newPassword });
-      localStorage.removeItem(RESET_TOKEN_KEY);
       toast.success('Password reset successfully');
     } catch (error: any) {
       const msg = error.response?.data?.message || error.message || 'Reset password failed';
@@ -134,17 +113,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // Update user profile
-  const updateProfile = async (userId: string, updates: Partial<User>): Promise<void> => {
+  const updateProfile = async (_userId: string, updates: Partial<User>): Promise<void> => {
     try {
-      const backendUpdates: any = { ...updates };
-      if (updates.avatarUrl !== undefined) {
-        backendUpdates.avatar = updates.avatarUrl;
-        delete backendUpdates.avatarUrl;
-      }
-      const { data } = await API.put('/auth/profile', backendUpdates);
-      const mapped = mapUser(data.user);
-      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(mapped));
-      setUser(mapped);
+      const { data } = await API.put('/auth/profile', updates);
+      const updatedUser = { ...user, ...data.user };
+      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(updatedUser));
+      setUser(updatedUser as User);
       toast.success('Profile updated successfully');
     } catch (error: any) {
       const msg = error.response?.data?.message || error.message || 'Profile update failed';

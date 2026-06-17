@@ -27,7 +27,7 @@ API.interceptors.request.use((config) => {
 export const EntrepreneurDashboard: React.FC = () => {
   const { user } = useAuth();
   const [collaborationRequests, setCollaborationRequests] = useState<CollaborationRequest[]>([]);
-  const [recommendedInvestors, setRecommendedInvestors] = useState(investors.slice(0, 3));
+  const [recommendedInvestors] = useState(investors.slice(0, 3));
   const [upcomingMeetingsCount, setUpcomingMeetingsCount] = useState(0);
   
   useEffect(() => {

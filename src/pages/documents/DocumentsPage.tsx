@@ -53,7 +53,7 @@ export const DocumentsPage: React.FC = () => {
     setIsUploading(true);
     const toastId = toast.loading('Uploading document...');
     try {
-      const { data } = await API.post('/documents/upload', formData, {
+      await API.post('/documents/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       toast.success('Document uploaded successfully!', { id: toastId });

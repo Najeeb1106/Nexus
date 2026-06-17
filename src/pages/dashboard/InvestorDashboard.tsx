@@ -8,7 +8,7 @@ import { Input } from '../../components/ui/Input';
 import { Badge } from '../../components/ui/Badge';
 import { EntrepreneurCard } from '../../components/entrepreneur/EntrepreneurCard';
 import { useAuth } from '../../context/AuthContext';
-import { Entrepreneur } from '../../types';
+import { CollaborationRequest } from '../../types';
 import { entrepreneurs } from '../../data/users';
 import { getRequestsFromInvestor } from '../../data/collaborationRequests';
 
@@ -16,18 +16,12 @@ export const InvestorDashboard: React.FC = () => {
   const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedIndustries, setSelectedIndustries] = useState<string[]>([]);
-  const [requestedEntrepreneurIds, setRequestedEntrepreneurIds] = useState<string[]>([]);
+  const [sentRequests, setSentRequests] = useState<CollaborationRequest[]>([]);
   
   useEffect(() => {
     if (user) {
       getRequestsFromInvestor(user.id).then((requests) => {
-        const ids = requests.map(req => {
-          if (typeof req.entrepreneurId === 'object' && req.entrepreneurId !== null) {
-            return (req.entrepreneurId as any)._id || (req.entrepreneurId as any).id;
-          }
-          return req.entrepreneurId as string;
-        });
-        setRequestedEntrepreneurIds(ids);
+        setSentRequests(requests);
       });
     }
   }, [user]);

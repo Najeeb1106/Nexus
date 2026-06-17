@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, DollarSign, TrendingUp, Users, Calendar, ArrowRightLeft, History, PlusCircle, AlertCircle } from 'lucide-react';
+import { Search, Filter, DollarSign, TrendingUp, Users, Calendar, ArrowRightLeft, History, AlertCircle } from 'lucide-react';
 import { Card, CardHeader, CardBody } from '../../components/ui/Card';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
