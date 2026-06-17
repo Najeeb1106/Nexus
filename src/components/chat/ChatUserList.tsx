@@ -34,7 +34,7 @@ export const ChatUserList: React.FC<ChatUserListProps> = ({ conversations }) => 
               const otherParticipantId = conversation.participants.find(id => id !== currentUser.id);
               if (!otherParticipantId) return null;
               
-              const otherUser = findUserById(otherParticipantId);
+              const otherUser = conversation.partner || findUserById(otherParticipantId);
               if (!otherUser) return null;
               
               const lastMessage = conversation.lastMessage;

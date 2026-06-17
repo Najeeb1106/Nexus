@@ -62,6 +62,14 @@ export const getConversations = async (req: AuthRequest, res: Response) => {
         return {
           id: partner._id.toString(),
           participants: [currentUserId.toString(), partner._id.toString()],
+          partner: {
+            id: partner._id.toString(),
+            name: partner.name,
+            email: partner.email,
+            avatarUrl: partner.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(partner.name)}&background=random`,
+            role: partner.role,
+            isOnline: false
+          },
           lastMessage: {
             id: item.lastMessage._id.toString(),
             senderId: item.lastMessage.senderId.toString(),

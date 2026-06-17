@@ -46,6 +46,14 @@ export interface ChatConversation {
   participants: string[];
   lastMessage?: Message;
   updatedAt: string;
+  partner?: {
+    id: string;
+    name: string;
+    email: string;
+    avatarUrl?: string;
+    role: string;
+    isOnline?: boolean;
+  };
 }
 
 export interface CollaborationRequest {
