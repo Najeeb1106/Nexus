@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { FileText, Upload, Download, Trash2, Share2, AlertCircle } from 'lucide-react';
+import { FileText, Upload, Download, Trash2, Share2, AlertCircle, PenTool } from 'lucide-react';
 import { Card, CardHeader, CardBody } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import { useAuth } from '../../context/AuthContext';
+import { SignaturePad } from '../../components/documents/SignaturePad';
 import toast from 'react-hot-toast';
 import axios from 'axios';
 
@@ -24,6 +25,7 @@ export const DocumentsPage: React.FC = () => {
   const [documents, setDocuments] = useState<any[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [signingDocId, setSigningDocId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const loadDocuments = () => {
@@ -57,7 +59,6 @@ export const DocumentsPage: React.FC = () => {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       toast.success('Document uploaded successfully!', { id: toastId });
-      // Reload documents to ensure populated owners
       loadDocuments();
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Upload failed', { id: toastId });
@@ -81,6 +82,19 @@ export const DocumentsPage: React.FC = () => {
       loadDocuments();
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Failed to share document');
+    }
+  };
+
+  const handleSign = async (base64: string) => {
+    if (!signingDocId) return;
+    const toastId = toast.loading('Applying electronic signature...');
+    try {
+      await API.post(`/documents/${signingDocId}/sign`, { signatureImageBase64: base64 });
+      toast.success('Document signed successfully!', { id: toastId });
+      setSigningDocId(null);
+      loadDocuments();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to sign document', { id: toastId });
     }
   };
 
@@ -211,6 +225,19 @@ export const DocumentsPage: React.FC = () => {
                         </div>
 
                         <div className="flex items-center gap-2 ml-4">
+                          {doc.status !== 'signed' && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="p-2 text-primary-600 hover:text-primary-700 font-semibold"
+                              aria-label="Sign"
+                              title="Sign Document"
+                              onClick={() => setSigningDocId(docId)}
+                            >
+                              <PenTool size={18} />
+                            </Button>
+                          )}
+
                           <Button
                             variant="ghost"
                             size="sm"
@@ -262,6 +289,13 @@ export const DocumentsPage: React.FC = () => {
           </Card>
         </div>
       </div>
+
+      {signingDocId && (
+        <SignaturePad
+          onSave={handleSign}
+          onCancel={() => setSigningDocId(null)}
+        />
+      )}
     </div>
   );
 };
