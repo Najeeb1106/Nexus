@@ -1,4 +1,5 @@
 import { Response } from 'express';
+import mongoose from 'mongoose';
 import Message from '../models/Message';
 import User from '../models/User';
 import { AuthRequest } from '../middleware/auth';
@@ -8,6 +9,10 @@ export const getChatMessages = async (req: AuthRequest, res: Response) => {
   try {
     const { partnerId } = req.params;
     const currentUserId = req.user._id;
+
+    if (!mongoose.Types.ObjectId.isValid(partnerId)) {
+      return res.status(400).json({ message: 'Invalid partner ID format' });
+    }
 
     const messages = await Message.find({
       $or: [
