@@ -9,6 +9,7 @@ import { ChatUserList } from '../../components/chat/ChatUserList';
 import { useAuth } from '../../context/AuthContext';
 import { useSocket } from '../../context/SocketContext';
 import { ScheduleMeetingModal } from '../../components/chat/ScheduleMeetingModal';
+import { VideoCall } from '../../components/video/VideoCall';
 import { Message } from '../../types';
 import axios from 'axios';
 
@@ -34,6 +35,12 @@ export const ChatPage: React.FC = () => {
   const [onlineUserIds, setOnlineUserIds] = useState<string[]>([]);
   const [chatPartner, setChatPartner] = useState<any | null>(null);
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
+
+  // WebRTC Call States
+  const [incomingCall, setIncomingCall] = useState<{ fromId: string; fromName: string; offer: any } | null>(null);
+  const [showVideoCall, setShowVideoCall] = useState(false);
+  const [activeCallDetails, setActiveCallDetails] = useState<any | null>(null);
+
   const messagesEndRef = useRef<null | HTMLDivElement>(null);
 
   // Fetch conversations history
@@ -113,10 +120,37 @@ export const ChatPage: React.FC = () => {
       loadConversations();
     });
 
+    // WebRTC Signaling listeners
+    socket.on('call:incoming', async ({ from, offer }) => {
+      try {
+        const { data } = await API.get(`/auth/users/${from}`);
+        setIncomingCall({
+          fromId: from,
+          fromName: data.user.name,
+          offer
+        });
+      } catch (err) {
+        console.error('Error fetching caller details:', err);
+        setIncomingCall({
+          fromId: from,
+          fromName: 'Nexus Partner',
+          offer
+        });
+      }
+    });
+
+    socket.on('call:ended', () => {
+      setIncomingCall(null);
+      setShowVideoCall(false);
+      setActiveCallDetails(null);
+    });
+
     return () => {
       socket.off('users:online');
       socket.off('message:receive');
       socket.off('message:sent');
+      socket.off('call:incoming');
+      socket.off('call:ended');
     };
   }, [socket, userId]);
 
@@ -133,10 +167,38 @@ export const ChatPage: React.FC = () => {
     setNewMessage('');
   };
 
+  const startVideoCall = () => {
+    if (!chatPartner) return;
+    setActiveCallDetails({
+      targetUserId: chatPartner.id,
+      targetUserName: chatPartner.name,
+      isIncoming: false
+    });
+    setShowVideoCall(true);
+  };
+
+  const acceptCall = () => {
+    if (!incomingCall) return;
+    setActiveCallDetails({
+      targetUserId: incomingCall.fromId,
+      targetUserName: incomingCall.fromName,
+      isIncoming: true,
+      incomingOffer: incomingCall.offer
+    });
+    setIncomingCall(null);
+    setShowVideoCall(true);
+  };
+
+  const declineCall = () => {
+    if (!incomingCall || !socket) return;
+    socket.emit('call:end', { to: incomingCall.fromId });
+    setIncomingCall(null);
+  };
+
   if (!currentUser) return null;
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] bg-white border border-gray-200 rounded-lg overflow-hidden animate-fade-in">
+    <div className="flex h-[calc(100vh-4rem)] bg-white border border-gray-200 rounded-lg overflow-hidden animate-fade-in relative">
       {/* Conversations sidebar */}
       <div className="hidden md:block w-1/3 lg:w-1/4 border-r border-gray-200">
         <ChatUserList conversations={conversations} />
@@ -190,6 +252,7 @@ export const ChatPage: React.FC = () => {
                   size="sm"
                   className="rounded-full p-2"
                   aria-label="Video call"
+                  onClick={startVideoCall}
                 >
                   <Video size={18} />
                 </Button>
@@ -276,6 +339,44 @@ export const ChatPage: React.FC = () => {
         )}
       </div>
 
+      {/* Incoming Call Dialog */}
+      {incomingCall && (
+        <div className="fixed top-4 right-4 bg-white/95 backdrop-blur shadow-2xl border border-gray-100 rounded-xl p-4 z-50 flex flex-col gap-3 max-w-sm w-full animate-bounce">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center">
+              <Video className="text-primary-600" size={20} />
+            </div>
+            <div>
+              <h4 className="font-semibold text-gray-900">Incoming Video Call</h4>
+              <p className="text-sm text-gray-500">from {incomingCall.fromName}</p>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Button size="sm" variant="primary" onClick={acceptCall} className="flex-1">
+              Accept
+            </Button>
+            <Button size="sm" variant="outline" onClick={declineCall} className="flex-1 text-red-600 border-red-200 hover:bg-red-50">
+              Decline
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Active Video Call Screen */}
+      {showVideoCall && activeCallDetails && (
+        <VideoCall
+          targetUserId={activeCallDetails.targetUserId}
+          targetUserName={activeCallDetails.targetUserName}
+          isIncoming={activeCallDetails.isIncoming}
+          incomingOffer={activeCallDetails.incomingOffer}
+          onClose={() => {
+            setShowVideoCall(false);
+            setActiveCallDetails(null);
+          }}
+        />
+      )}
+
+      {/* Schedule Meeting Modal */}
       {chatPartner && (
         <ScheduleMeetingModal
           isOpen={isScheduleModalOpen}

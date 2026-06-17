@@ -87,6 +87,38 @@ io.on('connection', (socket) => {
     }
   });
 
+  // WebRTC Signaling
+  socket.on('call:offer', (data: { to: string; offer: any }) => {
+    const targetSocket = onlineUsers.get(data.to);
+    if (targetSocket) {
+      io.to(targetSocket).emit('call:incoming', {
+        from: userId,
+        offer: data.offer,
+      });
+    }
+  });
+
+  socket.on('call:answer', (data: { to: string; answer: any }) => {
+    const targetSocket = onlineUsers.get(data.to);
+    if (targetSocket) {
+      io.to(targetSocket).emit('call:answered', { answer: data.answer });
+    }
+  });
+
+  socket.on('call:ice-candidate', (data: { to: string; candidate: any }) => {
+    const targetSocket = onlineUsers.get(data.to);
+    if (targetSocket) {
+      io.to(targetSocket).emit('call:ice-candidate', { candidate: data.candidate });
+    }
+  });
+
+  socket.on('call:end', (data: { to: string }) => {
+    const targetSocket = onlineUsers.get(data.to);
+    if (targetSocket) {
+      io.to(targetSocket).emit('call:ended');
+    }
+  });
+
   socket.on('disconnect', () => {
     onlineUsers.delete(userId);
     io.emit('users:online', Array.from(onlineUsers.keys()));
