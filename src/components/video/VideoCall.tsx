@@ -24,6 +24,7 @@ export const VideoCall: React.FC<VideoCallProps> = ({
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
+  const [hasPermissionError, setHasPermissionError] = useState(false);
   const socket = useSocket();
 
   const iceConfig = {
@@ -74,6 +75,7 @@ export const VideoCall: React.FC<VideoCallProps> = ({
       socket.emit('call:offer', { to: targetUserId, offer });
     } catch (err) {
       console.error('Error starting video call:', err);
+      setHasPermissionError(true);
     }
   };
 
@@ -105,6 +107,7 @@ export const VideoCall: React.FC<VideoCallProps> = ({
       socket.emit('call:answer', { to: targetUserId, answer });
     } catch (err) {
       console.error('Error answering video call:', err);
+      setHasPermissionError(true);
     }
   };
 
@@ -182,7 +185,20 @@ export const VideoCall: React.FC<VideoCallProps> = ({
   return (
     <div className="fixed inset-0 bg-gray-950 z-50 flex flex-col items-center justify-center">
       <div className="relative w-full h-full max-w-5xl max-h-[80vh] bg-black rounded-2xl overflow-hidden shadow-2xl flex items-center justify-center">
-        {isConnected ? (
+        {hasPermissionError ? (
+          <div className="text-white text-center p-8 max-w-md">
+            <div className="w-16 h-16 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center mx-auto mb-4">
+              <VideoOff className="text-red-500" size={32} />
+            </div>
+            <h3 className="text-lg font-semibold mb-2">Camera & Mic Access Required</h3>
+            <p className="text-sm text-gray-400 mb-6">
+              Nexus needs access to your camera and microphone to establish this video call. Please verify your browser's site permissions and try again.
+            </p>
+            <button onClick={endCall} className="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors">
+              Close Call Screen
+            </button>
+          </div>
+        ) : isConnected ? (
           <video ref={remoteVideoRef} autoPlay playsInline className="w-full h-full object-cover" />
         ) : (
           <div className="text-white text-center">
@@ -195,13 +211,15 @@ export const VideoCall: React.FC<VideoCallProps> = ({
           </div>
         )}
 
-        <video
-          ref={localVideoRef}
-          autoPlay
-          playsInline
-          muted
-          className="absolute bottom-4 right-4 w-44 h-32 rounded-lg border-2 border-white/20 object-cover shadow-lg bg-gray-900"
-        />
+        {!hasPermissionError && (
+          <video
+            ref={localVideoRef}
+            autoPlay
+            playsInline
+            muted
+            className="absolute bottom-4 right-4 w-44 h-32 rounded-lg border-2 border-white/20 object-cover shadow-lg bg-gray-900"
+          />
+        )}
       </div>
 
       <div className="mt-8 flex gap-4">
