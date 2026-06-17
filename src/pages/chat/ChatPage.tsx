@@ -276,13 +276,23 @@ export const ChatPage: React.FC = () => {
             <div className="flex-1 p-4 overflow-y-auto bg-gray-50">
               {messages.length > 0 ? (
                 <div className="space-y-4">
-                  {messages.map((message) => (
-                    <ChatMessage
-                      key={message.id}
-                      message={message}
-                      isCurrentUser={message.senderId === currentUser.id}
-                    />
-                  ))}
+                  {messages.map((message) => {
+                    const isMe = message.senderId === currentUser.id || message.senderId === currentUser._id;
+                    const name = isMe ? currentUser.name : (chatPartner?.name || 'Partner');
+                    const avatar = isMe 
+                      ? (currentUser.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.name)}&background=random`) 
+                      : (chatPartner?.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(chatPartner?.name || 'Partner')}&background=random`);
+
+                    return (
+                      <ChatMessage
+                        key={message.id}
+                        message={message}
+                        isCurrentUser={isMe}
+                        senderName={name}
+                        senderAvatarUrl={avatar}
+                      />
+                    );
+                  })}
                   <div ref={messagesEndRef} />
                 </div>
               ) : (
