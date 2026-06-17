@@ -1,15 +1,28 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, Filter, MapPin } from 'lucide-react';
 import { Input } from '../../components/ui/Input';
 import { Card, CardHeader, CardBody } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import { InvestorCard } from '../../components/investor/InvestorCard';
-import { investors } from '../../data/users';
+import API, { mapInvestor } from '../../lib/api';
+import { Investor } from '../../types';
+import toast from 'react-hot-toast';
 
 export const InvestorsPage: React.FC = () => {
+  const [investors, setInvestors] = useState<Investor[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStages, setSelectedStages] = useState<string[]>([]);
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
+  
+  useEffect(() => {
+    API.get('/auth/users?role=investor')
+      .then(({ data }) => {
+        setInvestors(data.users.map((u: any) => mapInvestor(u)));
+      })
+      .catch(() => toast.error('Failed to load investors'))
+      .finally(() => setLoading(false));
+  }, []);
   
   // Get unique investment stages and interests
   const allStages = Array.from(new Set(investors.flatMap(i => i.investmentStage)));
@@ -139,14 +152,20 @@ export const InvestorsPage: React.FC = () => {
             </div>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {filteredInvestors.map(investor => (
-              <InvestorCard
-                key={investor.id}
-                investor={investor}
-              />
-            ))}
-          </div>
+          {loading ? (
+            <div className="flex justify-center items-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary-600"></div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {filteredInvestors.map(investor => (
+                <InvestorCard
+                  key={investor.id}
+                  investor={investor}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

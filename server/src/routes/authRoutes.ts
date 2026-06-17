@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { body } from 'express-validator';
-import { register, login, getMe, updateProfile, forgotPassword, resetPassword, getUserById, sendOTP, verifyOTP } from '../controllers/authController';
+import { register, login, getMe, updateProfile, forgotPassword, resetPassword, getUserById, sendOTP, verifyOTP, getUsers } from '../controllers/authController';
 import { protect } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 
@@ -29,6 +29,7 @@ router.post(
 );
 
 router.get('/me', protect, getMe);
+router.get('/users', protect, getUsers);
 router.get('/users/:id', protect, getUserById);
 
 router.put('/profile', protect, updateProfile);

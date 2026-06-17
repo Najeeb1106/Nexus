@@ -30,53 +30,15 @@ const stripePromise = loadStripe(
   'pk_test_51Pq3yG2LocE13f7acXbBvM6w00oG2K89Tsk9i4dD8F8F8F8F8F8F8F8F8F8F8F8F8F8F8F8F8F8F8F8F8F8F8F8F8F8F8F'
 );
 
-const originalDeals = [
-  {
-    id: 1,
-    startup: {
-      name: 'TechWave AI',
-      logo: 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg',
-      industry: 'FinTech'
-    },
-    amount: '$1.5M',
-    equity: '15%',
-    status: 'Due Diligence',
-    stage: 'Series A',
-    lastActivity: '2024-02-15'
-  },
-  {
-    id: 2,
-    startup: {
-      name: 'GreenLife Solutions',
-      logo: 'https://images.pexels.com/photos/614810/pexels-photo-614810.jpeg',
-      industry: 'CleanTech'
-    },
-    amount: '$2M',
-    equity: '20%',
-    status: 'Term Sheet',
-    stage: 'Seed',
-    lastActivity: '2024-02-10'
-  },
-  {
-    id: 3,
-    startup: {
-      name: 'HealthPulse',
-      logo: 'https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg',
-      industry: 'HealthTech'
-    },
-    amount: '$800K',
-    equity: '12%',
-    status: 'Negotiation',
-    stage: 'Pre-seed',
-    lastActivity: '2024-02-05'
-  }
-];
+
 
 export const DealsPage: React.FC = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'pipeline' | 'wallet'>('pipeline');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string[]>([]);
+  const [deals, setDeals] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [transactions, setTransactions] = useState<any[]>([]);
   const [balance, setBalance] = useState(0);
 
@@ -109,9 +71,48 @@ export const DealsPage: React.FC = () => {
       .catch((err) => console.error('Error fetching transactions:', err));
   };
 
+  const loadDeals = () => {
+    setLoading(true);
+    API.get('/collaborations')
+      .then(({ data }) => {
+        const mappedDeals = data.requests.map((r: any) => {
+          const startupName = r.entrepreneurId?.startupName || 'NextGen Tech';
+          const logo = r.entrepreneurId?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(startupName)}&background=random`;
+          const industry = r.entrepreneurId?.industry || 'Tech';
+          
+          let amount = '$1.5M';
+          let equity = '15%';
+          if (r.dealTerms) {
+            const parts = r.dealTerms.split(',');
+            if (parts[0]) amount = parts[0].trim();
+            if (parts[1]) equity = parts[1].trim();
+          }
+          
+          let status = 'Due Diligence';
+          if (r.status === 'accepted') status = 'Closed';
+          else if (r.status === 'rejected') status = 'Passed';
+          else status = 'Negotiation';
+          
+          return {
+            id: r.id || r._id,
+            startup: { name: startupName, logo, industry },
+            amount,
+            equity,
+            status,
+            stage: r.entrepreneurId?.fundingStage || 'Seed',
+            lastActivity: r.updatedAt || r.createdAt
+          };
+        });
+        setDeals(mappedDeals);
+      })
+      .catch((err) => console.error('Error fetching deals:', err))
+      .finally(() => setLoading(false));
+  };
+
   useEffect(() => {
     if (user) {
       loadTransactions();
+      loadDeals();
     }
   }, [user]);
 
@@ -160,7 +161,7 @@ export const DealsPage: React.FC = () => {
     }
   };
 
-  const filteredDeals = originalDeals.filter(deal => {
+  const filteredDeals = deals.filter(deal => {
     const matchesSearch = searchQuery === '' || 
       deal.startup.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       deal.startup.industry.toLowerCase().includes(searchQuery.toLowerCase());
@@ -303,26 +304,42 @@ export const DealsPage: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
-                    {filteredDeals.map(deal => (
-                      <tr key={deal.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <Avatar src={deal.startup.logo} alt={deal.startup.name} size="sm" className="flex-shrink-0" />
-                            <div className="ml-4">
-                              <div className="text-sm font-medium text-gray-900">{deal.startup.name}</div>
-                              <div className="text-sm text-gray-500">{deal.startup.industry}</div>
-                            </div>
+                    {loading ? (
+                      <tr>
+                        <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
+                          <div className="flex justify-center items-center">
+                            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary-600"></div>
                           </div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{deal.amount}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{deal.equity}</td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <Badge variant={getStatusColor(deal.status)}>{deal.status}</Badge>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{deal.stage}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(deal.lastActivity).toLocaleDateString()}</td>
                       </tr>
-                    ))}
+                    ) : filteredDeals.length > 0 ? (
+                      filteredDeals.map(deal => (
+                        <tr key={deal.id} className="hover:bg-gray-50">
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center">
+                              <Avatar src={deal.startup.logo} alt={deal.startup.name} size="sm" className="flex-shrink-0" />
+                              <div className="ml-4">
+                                <div className="text-sm font-medium text-gray-900">{deal.startup.name}</div>
+                                <div className="text-sm text-gray-500">{deal.startup.industry}</div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{deal.amount}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{deal.equity}</td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <Badge variant={getStatusColor(deal.status)}>{deal.status}</Badge>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{deal.stage}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(deal.lastActivity).toLocaleDateString()}</td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
+                          No active deals found.
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>

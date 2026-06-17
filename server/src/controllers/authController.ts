@@ -201,4 +201,20 @@ export const verifyOTP = async (req: AuthRequest, res: Response) => {
   }
 };
 
+export const getUsers = async (req: AuthRequest, res: Response) => {
+  try {
+    const { role } = req.query;
+    const filter: any = { isActive: true };
+    if (role) filter.role = role;
+
+    const users = await User.find(filter)
+      .select('-password -twoFactorOTP -resetPasswordToken')
+      .sort({ createdAt: -1 });
+
+    res.json({ success: true, users });
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching users', error });
+  }
+};
+
 

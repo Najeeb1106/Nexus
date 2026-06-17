@@ -1,14 +1,27 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, Filter, MapPin } from 'lucide-react';
 import { Input } from '../../components/ui/Input';
 import { Card, CardHeader, CardBody } from '../../components/ui/Card';
 import { EntrepreneurCard } from '../../components/entrepreneur/EntrepreneurCard';
-import { entrepreneurs } from '../../data/users';
+import API, { mapEntrepreneur } from '../../lib/api';
+import { Entrepreneur } from '../../types';
+import toast from 'react-hot-toast';
 
 export const EntrepreneursPage: React.FC = () => {
+  const [entrepreneurs, setEntrepreneurs] = useState<Entrepreneur[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedIndustries, setSelectedIndustries] = useState<string[]>([]);
   const [selectedFundingRange, setSelectedFundingRange] = useState<string[]>([]);
+
+  useEffect(() => {
+    API.get('/auth/users?role=entrepreneur')
+      .then(({ data }) => {
+        setEntrepreneurs(data.users.map((u: any) => mapEntrepreneur(u)));
+      })
+      .catch(() => toast.error('Failed to load startups'))
+      .finally(() => setLoading(false));
+  }, []);
   
   // Get unique industries and funding ranges
   const allIndustries = Array.from(new Set(entrepreneurs.map(e => e.industry)));
@@ -150,14 +163,20 @@ export const EntrepreneursPage: React.FC = () => {
             </div>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {filteredEntrepreneurs.map(entrepreneur => (
-              <EntrepreneurCard
-                key={entrepreneur.id}
-                entrepreneur={entrepreneur}
-              />
-            ))}
-          </div>
+          {loading ? (
+            <div className="flex justify-center items-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary-600"></div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {filteredEntrepreneurs.map(entrepreneur => (
+                <EntrepreneurCard
+                  key={entrepreneur.id}
+                  entrepreneur={entrepreneur}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>
