@@ -57,6 +57,9 @@ app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+import swaggerUi from 'swagger-ui-express';
+import swaggerJSDoc from 'swagger-jsdoc';
+
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/messages', messageRoutes);
@@ -64,6 +67,26 @@ app.use('/api/meetings', meetingRoutes);
 app.use('/api/documents', documentRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/collaborations', collaborationRoutes);
+
+// Swagger Documentation Configuration
+const swaggerSpec = swaggerJSDoc({
+  definition: {
+    openapi: '3.0.0',
+    info: { title: 'Nexus Platform API', version: '1.0.0', description: 'API documentation for the Nexus Platform' },
+    servers: [{
+      url: process.env.NODE_ENV === 'production'
+        ? 'https://nexus-api.onrender.com/api'
+        : 'http://localhost:5000/api',
+    }],
+    components: {
+      securitySchemes: { bearerAuth: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' } },
+    },
+    security: [{ bearerAuth: [] }],
+  },
+  apis: ['./src/routes/*.ts', './dist/routes/*.js'],
+});
+
+app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 
 
