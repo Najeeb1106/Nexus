@@ -50,12 +50,14 @@ export interface ChatConversation {
 
 export interface CollaborationRequest {
   id: string;
-  investorId: string;
-  entrepreneurId: string;
+  investorId: any;
+  entrepreneurId: any;
   message: string;
   status: 'pending' | 'accepted' | 'rejected';
   createdAt: string;
+  dealTerms?: string;
 }
+
 
 export interface Document {
   id: string;
