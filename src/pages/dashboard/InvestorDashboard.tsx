@@ -15,12 +15,24 @@ export const InvestorDashboard: React.FC = () => {
   const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedIndustries, setSelectedIndustries] = useState<string[]>([]);
+  const [requestedEntrepreneurIds, setRequestedEntrepreneurIds] = useState<string[]>([]);
   
+  useEffect(() => {
+    if (user) {
+      getRequestsFromInvestor(user.id).then((requests) => {
+        const ids = requests.map(req => {
+          if (typeof req.entrepreneurId === 'object' && req.entrepreneurId !== null) {
+            return (req.entrepreneurId as any)._id || (req.entrepreneurId as any).id;
+          }
+          return req.entrepreneurId as string;
+        });
+        setRequestedEntrepreneurIds(ids);
+      });
+    }
+  }, [user]);
+
   if (!user) return null;
-  
-  // Get collaboration requests sent by this investor
-  const sentRequests = getRequestsFromInvestor(user.id);
-  const requestedEntrepreneurIds = sentRequests.map(req => req.entrepreneurId);
+
   
   // Filter entrepreneurs based on search and industry filters
   const filteredEntrepreneurs = entrepreneurs.filter(entrepreneur => {

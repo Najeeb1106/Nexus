@@ -6,6 +6,11 @@ import dotenv from 'dotenv';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import jwt from 'jsonwebtoken';
+import rateLimit from 'express-rate-limit';
+import mongoSanitize from 'express-mongo-sanitize';
+const hpp = require('hpp');
+const xss = require('xss-clean');
+
 import connectDB from './config/db';
 
 import authRoutes from './routes/authRoutes';
@@ -13,6 +18,7 @@ import messageRoutes from './routes/messageRoutes';
 import meetingRoutes from './routes/meetingRoutes';
 import documentRoutes from './routes/documentRoutes';
 import paymentRoutes from './routes/paymentRoutes';
+import collaborationRoutes from './routes/collaborationRoutes';
 
 dotenv.config();
 
@@ -26,6 +32,26 @@ app.use(morgan('dev'));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
+// Security Sanitization
+app.use(mongoSanitize());
+app.use(xss());
+app.use(hpp());
+
+// Rate Limiting
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100,
+  message: { message: 'Too many requests from this IP, please try again later' }
+});
+app.use('/api', apiLimiter);
+
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // Limit to 10 login requests
+  message: { message: 'Too many login attempts from this IP, please try again after 15 minutes' }
+});
+app.use('/api/auth/login', loginLimiter);
+
 // Health check
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
@@ -37,6 +63,9 @@ app.use('/api/messages', messageRoutes);
 app.use('/api/meetings', meetingRoutes);
 app.use('/api/documents', documentRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api/collaborations', collaborationRoutes);
+
+
 
 
 

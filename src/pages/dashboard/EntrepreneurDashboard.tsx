@@ -33,8 +33,10 @@ export const EntrepreneurDashboard: React.FC = () => {
   useEffect(() => {
     if (user) {
       // Load collaboration requests
-      const requests = getRequestsForEntrepreneur(user.id);
-      setCollaborationRequests(requests);
+      getRequestsForEntrepreneur(user.id).then((requests) => {
+        setCollaborationRequests(requests);
+      });
+
 
       // Load meetings from backend
       API.get('/meetings')

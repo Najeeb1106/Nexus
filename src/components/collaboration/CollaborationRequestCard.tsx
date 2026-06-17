@@ -20,19 +20,29 @@ export const CollaborationRequestCard: React.FC<CollaborationRequestCardProps> =
   onStatusUpdate
 }) => {
   const navigate = useNavigate();
-  const investor = findUserById(request.investorId);
   
-  if (!investor) return null;
+  const investorData = typeof request.investorId === 'object' && request.investorId !== null
+    ? request.investorId
+    : findUserById(request.investorId as string);
+
+  if (!investorData) return null;
+
+  const investor = {
+    id: (investorData as any).id || (investorData as any)._id,
+    name: investorData.name,
+    avatarUrl: (investorData as any).avatarUrl || (investorData as any).avatar || '',
+    isOnline: (investorData as any).isOnline || false,
+  };
   
-  const handleAccept = () => {
-    updateRequestStatus(request.id, 'accepted');
+  const handleAccept = async () => {
+    await updateRequestStatus(request.id, 'accepted');
     if (onStatusUpdate) {
       onStatusUpdate(request.id, 'accepted');
     }
   };
   
-  const handleReject = () => {
-    updateRequestStatus(request.id, 'rejected');
+  const handleReject = async () => {
+    await updateRequestStatus(request.id, 'rejected');
     if (onStatusUpdate) {
       onStatusUpdate(request.id, 'rejected');
     }
@@ -45,6 +55,7 @@ export const CollaborationRequestCard: React.FC<CollaborationRequestCardProps> =
   const handleViewProfile = () => {
     navigate(`/profile/investor/${investor.id}`);
   };
+
   
   const getStatusBadge = () => {
     switch (request.status) {

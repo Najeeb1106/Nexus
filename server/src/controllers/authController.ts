@@ -1,8 +1,18 @@
 import { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
+import nodemailer from 'nodemailer';
 import User from '../models/User';
 import { AuthRequest } from '../middleware/auth';
+
+const transporter = nodemailer.createTransport({
+  host: process.env.EMAIL_HOST || 'smtp.mailtrap.io',
+  port: parseInt(process.env.EMAIL_PORT || '2525'),
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
+});
 
 const generateToken = (id: string): string => {
   return jwt.sign({ id }, process.env.JWT_SECRET as string, {
@@ -146,4 +156,49 @@ export const getUserById = async (req: Request, res: Response) => {
     res.status(500).json({ message: 'Error retrieving user', error });
   }
 };
+
+export const sendOTP = async (req: AuthRequest, res: Response) => {
+  try {
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    await User.findByIdAndUpdate(req.user._id, {
+      twoFactorOTP: otp,
+      twoFactorOTPExpiry: expiry,
+    });
+
+    await transporter.sendMail({
+      from: 'Nexus Platform <no-reply@nexus.app>',
+      to: req.user.email,
+      subject: 'Your Nexus OTP Code',
+      html: `<h2>Your OTP: <strong>${otp}</strong></h2><p>Expires in 10 minutes.</p>`,
+    });
+
+    res.json({ success: true, message: 'OTP sent to your email' });
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to send OTP', error });
+  }
+};
+
+export const verifyOTP = async (req: AuthRequest, res: Response) => {
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user || user.twoFactorOTP !== req.body.otp) {
+      return res.status(400).json({ message: 'Invalid OTP' });
+    }
+    if (user.twoFactorOTPExpiry && user.twoFactorOTPExpiry < new Date()) {
+      return res.status(400).json({ message: 'OTP expired' });
+    }
+
+    user.twoFactorOTP = undefined;
+    user.twoFactorOTPExpiry = undefined;
+    user.twoFactorEnabled = true;
+    await user.save();
+
+    res.json({ success: true, message: '2FA verified successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'OTP verification failed', error });
+  }
+};
+
 

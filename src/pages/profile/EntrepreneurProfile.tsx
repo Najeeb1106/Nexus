@@ -32,24 +32,33 @@ export const EntrepreneurProfile: React.FC = () => {
   const isCurrentUser = currentUser?.id === entrepreneur.id;
   const isInvestor = currentUser?.role === 'investor';
   
-  // Check if the current investor has already sent a request to this entrepreneur
-  const hasRequestedCollaboration = isInvestor && id 
-    ? getRequestsFromInvestor(currentUser.id).some(req => req.entrepreneurId === id)
-    : false;
-  
-  const handleSendRequest = () => {
+  const [hasRequestedCollaboration, setHasRequestedCollaboration] = React.useState(false);
+
+  React.useEffect(() => {
     if (isInvestor && currentUser && id) {
-      createCollaborationRequest(
+      getRequestsFromInvestor(currentUser.id).then((requests) => {
+        const matches = requests.some(req => {
+          const targetId = typeof req.entrepreneurId === 'object' && req.entrepreneurId !== null
+            ? (req.entrepreneurId as any)._id || (req.entrepreneurId as any).id
+            : req.entrepreneurId;
+          return targetId === id;
+        });
+        setHasRequestedCollaboration(matches);
+      });
+    }
+  }, [isInvestor, currentUser, id]);
+  
+  const handleSendRequest = async () => {
+    if (isInvestor && currentUser && id) {
+      await createCollaborationRequest(
         currentUser.id,
         id,
         `I'm interested in learning more about ${entrepreneur.startupName} and would like to explore potential investment opportunities.`
       );
-      
-      // In a real app, we would refresh the data or update state
-      // For this demo, we'll force a page reload
-      window.location.reload();
+      setHasRequestedCollaboration(true);
     }
   };
+
   
   return (
     <div className="space-y-6 animate-fade-in">
