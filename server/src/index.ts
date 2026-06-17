@@ -6,6 +6,8 @@ import dotenv from 'dotenv';
 import { createServer } from 'http';
 import connectDB from './config/db';
 
+import authRoutes from './routes/authRoutes';
+
 dotenv.config();
 
 const app = express();
@@ -24,8 +26,9 @@ app.get('/api/health', (_req, res) => {
 });
 
 // Routes (add as phases complete)
-// app.use('/api/auth', authRoutes);
+app.use('/api/auth', authRoutes);
 // app.use('/api/users', userRoutes);
+
 // app.use('/api/meetings', meetingRoutes);
 // app.use('/api/documents', documentRoutes);
 // app.use('/api/payments', paymentRoutes);
