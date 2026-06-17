@@ -10,17 +10,41 @@ import { useAuth } from '../../context/AuthContext';
 import { CollaborationRequest } from '../../types';
 import { getRequestsForEntrepreneur } from '../../data/collaborationRequests';
 import { investors } from '../../data/users';
+import axios from 'axios';
+
+const API = axios.create({
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+});
+
+API.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
 
 export const EntrepreneurDashboard: React.FC = () => {
   const { user } = useAuth();
   const [collaborationRequests, setCollaborationRequests] = useState<CollaborationRequest[]>([]);
   const [recommendedInvestors, setRecommendedInvestors] = useState(investors.slice(0, 3));
+  const [upcomingMeetingsCount, setUpcomingMeetingsCount] = useState(0);
   
   useEffect(() => {
     if (user) {
       // Load collaboration requests
       const requests = getRequestsForEntrepreneur(user.id);
       setCollaborationRequests(requests);
+
+      // Load meetings from backend
+      API.get('/meetings')
+        .then(({ data }) => {
+          const activeMeetings = data.meetings.filter(
+            (m: any) => m.status === 'pending' || m.status === 'accepted'
+          );
+          setUpcomingMeetingsCount(activeMeetings.length);
+        })
+        .catch((err) => console.error('Error fetching meetings:', err));
     }
   }, [user]);
   
@@ -93,7 +117,7 @@ export const EntrepreneurDashboard: React.FC = () => {
               </div>
               <div>
                 <p className="text-sm font-medium text-accent-700">Upcoming Meetings</p>
-                <h3 className="text-xl font-semibold text-accent-900">2</h3>
+                <h3 className="text-xl font-semibold text-accent-900">{upcomingMeetingsCount}</h3>
               </div>
             </div>
           </CardBody>

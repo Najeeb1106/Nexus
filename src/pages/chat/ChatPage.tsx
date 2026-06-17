@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
-import { Send, Phone, Video, Info, Smile, MessageCircle } from 'lucide-react';
+import { Send, Phone, Video, Info, Smile, MessageCircle, Calendar } from 'lucide-react';
 import { Avatar } from '../../components/ui/Avatar';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -8,6 +8,7 @@ import { ChatMessage } from '../../components/chat/ChatMessage';
 import { ChatUserList } from '../../components/chat/ChatUserList';
 import { useAuth } from '../../context/AuthContext';
 import { useSocket } from '../../context/SocketContext';
+import { ScheduleMeetingModal } from '../../components/chat/ScheduleMeetingModal';
 import { Message } from '../../types';
 import axios from 'axios';
 
@@ -32,6 +33,7 @@ export const ChatPage: React.FC = () => {
   const [conversations, setConversations] = useState<any[]>([]);
   const [onlineUserIds, setOnlineUserIds] = useState<string[]>([]);
   const [chatPartner, setChatPartner] = useState<any | null>(null);
+  const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
   const messagesEndRef = useRef<null | HTMLDivElement>(null);
 
   // Fetch conversations history
@@ -168,6 +170,16 @@ export const ChatPage: React.FC = () => {
                   variant="ghost"
                   size="sm"
                   className="rounded-full p-2"
+                  aria-label="Schedule meeting"
+                  onClick={() => setIsScheduleModalOpen(true)}
+                >
+                  <Calendar size={18} />
+                </Button>
+
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="rounded-full p-2"
                   aria-label="Voice call"
                 >
                   <Phone size={18} />
@@ -263,6 +275,15 @@ export const ChatPage: React.FC = () => {
           </div>
         )}
       </div>
+
+      {chatPartner && (
+        <ScheduleMeetingModal
+          isOpen={isScheduleModalOpen}
+          onClose={() => setIsScheduleModalOpen(false)}
+          partnerId={chatPartner.id}
+          partnerName={chatPartner.name}
+        />
+      )}
     </div>
   );
 };

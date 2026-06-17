@@ -10,6 +10,7 @@ import connectDB from './config/db';
 
 import authRoutes from './routes/authRoutes';
 import messageRoutes from './routes/messageRoutes';
+import meetingRoutes from './routes/meetingRoutes';
 
 dotenv.config();
 
@@ -31,6 +32,8 @@ app.get('/api/health', (_req, res) => {
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/messages', messageRoutes);
+app.use('/api/meetings', meetingRoutes);
+
 
 const io = new Server(httpServer, {
   cors: { origin: process.env.CLIENT_URL, credentials: true }
