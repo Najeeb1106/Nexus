@@ -51,7 +51,7 @@ export const ChatUserList: React.FC<ChatUserListProps> = ({ conversations }) => 
                   onClick={() => handleSelectUser(otherUser.id)}
                 >
                   <Avatar
-                    src={otherUser.avatarUrl}
+                    src={otherUser.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(otherUser.name)}&background=random`}
                     alt={otherUser.name}
                     size="md"
                     status={otherUser.isOnline ? 'online' : 'offline'}
