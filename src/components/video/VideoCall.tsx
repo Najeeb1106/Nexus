@@ -25,6 +25,7 @@ export const VideoCall: React.FC<VideoCallProps> = ({
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
   const [hasPermissionError, setHasPermissionError] = useState(false);
+  const iceCandidatesQueue = useRef<RTCIceCandidateInit[]>([]);
   const socket = useSocket();
 
   const iceConfig = {
@@ -102,12 +103,27 @@ export const VideoCall: React.FC<VideoCallProps> = ({
       };
 
       await pc.setRemoteDescription(new RTCSessionDescription(incomingOffer));
+      await flushIceCandidates();
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
       socket.emit('call:answer', { to: targetUserId, answer });
     } catch (err) {
       console.error('Error answering video call:', err);
       setHasPermissionError(true);
+    }
+  };
+
+  const flushIceCandidates = async () => {
+    if (!pcRef.current) return;
+    while (iceCandidatesQueue.current.length > 0) {
+      const candidate = iceCandidatesQueue.current.shift();
+      if (candidate) {
+        try {
+          await pcRef.current.addIceCandidate(new RTCIceCandidate(candidate));
+        } catch (e) {
+          console.error('Error flushing ICE candidate:', e);
+        }
+      }
     }
   };
 
@@ -154,14 +170,25 @@ export const VideoCall: React.FC<VideoCallProps> = ({
     }
 
     socket.on('call:answered', async ({ answer }) => {
-      if (pcRef.current) {
-        await pcRef.current.setRemoteDescription(new RTCSessionDescription(answer));
+      if (pcRef.current && pcRef.current.signalingState !== 'stable') {
+        try {
+          await pcRef.current.setRemoteDescription(new RTCSessionDescription(answer));
+          await flushIceCandidates();
+        } catch (e) {
+          console.error('Error setting remote description:', e);
+        }
       }
     });
 
     socket.on('call:ice-candidate', async ({ candidate }) => {
-      if (pcRef.current) {
-        await pcRef.current.addIceCandidate(new RTCIceCandidate(candidate));
+      if (pcRef.current && pcRef.current.remoteDescription) {
+        try {
+          await pcRef.current.addIceCandidate(new RTCIceCandidate(candidate));
+        } catch (e) {
+          console.error('Error adding ICE candidate:', e);
+        }
+      } else {
+        iceCandidatesQueue.current.push(candidate);
       }
     });
 
