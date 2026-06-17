@@ -4,9 +4,12 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
 import { createServer } from 'http';
+import { Server } from 'socket.io';
+import jwt from 'jsonwebtoken';
 import connectDB from './config/db';
 
 import authRoutes from './routes/authRoutes';
+import messageRoutes from './routes/messageRoutes';
 
 dotenv.config();
 
@@ -25,13 +28,67 @@ app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Routes (add as phases complete)
+// Routes
 app.use('/api/auth', authRoutes);
-// app.use('/api/users', userRoutes);
+app.use('/api/messages', messageRoutes);
 
-// app.use('/api/meetings', meetingRoutes);
-// app.use('/api/documents', documentRoutes);
-// app.use('/api/payments', paymentRoutes);
+const io = new Server(httpServer, {
+  cors: { origin: process.env.CLIENT_URL, credentials: true }
+});
+
+// Auth middleware for sockets
+io.use((socket, next) => {
+  const token = socket.handshake.auth.token;
+  if (!token) return next(new Error('Authentication error'));
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as { id: string };
+    socket.data.userId = decoded.id;
+    next();
+  } catch {
+    next(new Error('Invalid token'));
+  }
+});
+
+const onlineUsers = new Map<string, string>(); // userId -> socketId
+
+io.on('connection', (socket) => {
+  const userId = socket.data.userId;
+  onlineUsers.set(userId, socket.id);
+  io.emit('users:online', Array.from(onlineUsers.keys()));
+
+  socket.on('message:send', async (data: { receiverId: string; content: string }) => {
+    try {
+      const Message = (await import('./models/Message')).default;
+      const msg = await Message.create({
+        senderId: userId,
+        receiverId: data.receiverId,
+        content: data.content,
+      });
+
+      const formattedMsg = {
+        id: msg._id.toString(),
+        senderId: msg.senderId.toString(),
+        receiverId: msg.receiverId.toString(),
+        content: msg.content,
+        timestamp: msg.createdAt.toISOString(),
+        isRead: msg.isRead
+      };
+
+      const receiverSocketId = onlineUsers.get(data.receiverId);
+      if (receiverSocketId) {
+        io.to(receiverSocketId).emit('message:receive', formattedMsg);
+      }
+      socket.emit('message:sent', formattedMsg);
+    } catch (err) {
+      console.error('Error saving socket message:', err);
+    }
+  });
+
+  socket.on('disconnect', () => {
+    onlineUsers.delete(userId);
+    io.emit('users:online', Array.from(onlineUsers.keys()));
+  });
+});
 
 const PORT = process.env.PORT || 5000;
 
