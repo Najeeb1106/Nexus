@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { Send, Phone, Video, Info, Smile, MessageCircle, Calendar } from 'lucide-react';
 import { Avatar } from '../../components/ui/Avatar';
 import { Button } from '../../components/ui/Button';
@@ -27,6 +27,7 @@ API.interceptors.request.use((config) => {
 
 export const ChatPage: React.FC = () => {
   const { userId } = useParams<{ userId: string }>();
+  const navigate = useNavigate();
   const { user: currentUser } = useAuth();
   const socket = useSocket();
   const [messages, setMessages] = useState<Message[]>([]);
@@ -72,11 +73,14 @@ export const ChatPage: React.FC = () => {
             isOnline: onlineUserIds.includes(data.user.id || data.user._id)
           });
         })
-        .catch((err) => console.error('Error fetching user info:', err));
+        .catch((err) => {
+          console.error('Error fetching user info:', err);
+          navigate('/messages');
+        });
     } else {
       setChatPartner(null);
     }
-  }, [userId, onlineUserIds]);
+  }, [userId, onlineUserIds, navigate]);
 
   // Load message logs between current user and partner
   useEffect(() => {
