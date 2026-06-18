@@ -115,9 +115,23 @@ export const forgotPassword = async (req: Request, res: Response) => {
     user.resetPasswordExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
     await user.save({ validateBeforeSave: false });
 
-    // In production: send email with resetToken
-    // For now: return token in response (mock)
-    res.json({ success: true, message: 'Password reset token generated', resetToken });
+    // Log token to console in development
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`Password reset link: ${process.env.CLIENT_URL || 'http://localhost:5173'}/reset-password?token=${resetToken}`);
+    }
+
+    try {
+      await transporter.sendMail({
+        from: 'Nexus Platform <no-reply@nexus.app>',
+        to: user.email,
+        subject: 'Password Reset Request',
+        html: `<h2>Password Reset Request</h2><p>Click <a href="${process.env.CLIENT_URL || 'http://localhost:5173'}/reset-password?token=${resetToken}">here</a> to reset your password. The link is valid for 10 minutes.</p>`,
+      });
+    } catch (mailErr) {
+      console.error('Failed to send password reset email:', mailErr);
+    }
+
+    res.json({ success: true, message: 'Password reset link sent to your email' });
   } catch (error) {
     res.status(500).json({ message: 'Error in forgot password', error });
   }

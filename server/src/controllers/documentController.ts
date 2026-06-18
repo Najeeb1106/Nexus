@@ -88,6 +88,13 @@ export const signDocument = async (req: AuthRequest, res: Response) => {
     const doc = await DocumentModel.findById(req.params.id);
     if (!doc) return res.status(404).json({ message: 'Document not found' });
 
+    // Verify ownership or shared access
+    const isOwner = doc.ownerId.toString() === currentUserId;
+    const isShared = doc.sharedWith.some((id: any) => id.toString() === currentUserId);
+    if (!isOwner && !isShared) {
+      return res.status(403).json({ message: 'Not authorized to sign this document' });
+    }
+
     // Upload signature image to Cloudinary
     const result = await cloudinary.uploader.upload(signatureImageBase64, {
       folder: `nexus/signatures/${currentUserId}`,

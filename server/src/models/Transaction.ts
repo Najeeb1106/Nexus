@@ -22,4 +22,6 @@ const TransactionSchema = new Schema<ITransaction>({
   recipientId: { type: Schema.Types.ObjectId, ref: 'User' },
 }, { timestamps: true });
 
+TransactionSchema.index({ userId: 1 });
+
 export default mongoose.model<ITransaction>('Transaction', TransactionSchema);

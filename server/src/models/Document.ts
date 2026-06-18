@@ -32,4 +32,7 @@ const DocumentSchema = new Schema<IDocument>({
   tags: [{ type: String }],
 }, { timestamps: true });
 
+DocumentSchema.index({ ownerId: 1 });
+DocumentSchema.index({ sharedWith: 1 });
+
 export default mongoose.model<IDocument>('Document', DocumentSchema);

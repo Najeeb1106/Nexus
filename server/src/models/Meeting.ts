@@ -24,4 +24,7 @@ const MeetingSchema = new Schema<IMeeting>({
   agenda: { type: String },
 }, { timestamps: true });
 
+MeetingSchema.index({ organizerId: 1 });
+MeetingSchema.index({ attendeeId: 1 });
+
 export default mongoose.model<IMeeting>('Meeting', MeetingSchema);

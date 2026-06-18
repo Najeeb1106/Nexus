@@ -73,31 +73,38 @@ export const getMyTransactions = async (req: AuthRequest, res: Response) => {
 };
 
 export const transferFunds = async (req: AuthRequest, res: Response) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
   try {
     const { recipientId, amount, description } = req.body;
     const currentUserId = req.user._id.toString();
 
     // Create sender debit transaction
-    const senderTx = await Transaction.create({
+    const [senderTx] = await Transaction.create([{
       userId: new mongoose.Types.ObjectId(currentUserId) as any,
       type: 'transfer',
       amount,
       status: 'completed',
       description: `Transfer to user ${recipientId}: ${description}`,
       recipientId: new mongoose.Types.ObjectId(recipientId) as any,
-    });
+    }], { session });
 
     // Create recipient credit transaction
-    await Transaction.create({
+    await Transaction.create([{
       userId: new mongoose.Types.ObjectId(recipientId) as any,
       type: 'deposit',
       amount,
       status: 'completed',
       description: `Received transfer from ${req.user.name}: ${description}`,
-    });
+    }], { session });
+
+    await session.commitTransaction();
+    session.endSession();
 
     res.json({ success: true, transaction: senderTx });
   } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
     res.status(500).json({ message: 'Transfer failed', error });
   }
 };

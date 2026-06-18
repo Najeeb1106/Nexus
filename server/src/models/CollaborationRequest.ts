@@ -18,4 +18,7 @@ const CollabSchema = new Schema<ICollaborationRequest>({
   dealTerms: { type: String },
 }, { timestamps: true });
 
+CollabSchema.index({ investorId: 1, entrepreneurId: 1 });
+CollabSchema.index({ entrepreneurId: 1 });
+
 export default mongoose.model<ICollaborationRequest>('CollaborationRequest', CollabSchema);
