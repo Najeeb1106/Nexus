@@ -164,10 +164,104 @@ export const resetPassword = async (req: Request, res: Response) => {
 
 export const getUserById = async (req: Request, res: Response) => {
   try {
-    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+    const id = req.params.id;
+
+    // Compatibility layer for mock demo users
+    if (['i1', 'i2', 'i3', 'e1', 'e2', 'e3', 'e4'].includes(id)) {
+      const mockUsers: Record<string, any> = {
+        i1: {
+          id: 'i1',
+          name: 'Michael Rodriguez',
+          email: 'michael@vcinnovate.com',
+          role: 'investor',
+          avatar: 'https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg',
+          bio: 'Early-stage investor with focus on B2B SaaS and fintech. Previously founded and exited two startups.',
+          investmentFocus: ['FinTech', 'SaaS', 'AI/ML'],
+          minInvestment: 250000,
+          maxInvestment: 1500000,
+          location: 'San Francisco, CA'
+        },
+        i2: {
+          id: 'i2',
+          name: 'Jennifer Lee',
+          email: 'jennifer@impactvc.org',
+          role: 'investor',
+          avatar: 'https://images.pexels.com/photos/1181686/pexels-photo-1181686.jpeg',
+          bio: 'Impact investor focused on climate tech, sustainable agriculture, and clean energy.',
+          investmentFocus: ['CleanTech', 'AgTech', 'Sustainability'],
+          minInvestment: 500000,
+          maxInvestment: 3000000,
+          location: 'Portland, OR'
+        },
+        i3: {
+          id: 'i3',
+          name: 'Robert Torres',
+          email: 'robert@healthventures.com',
+          role: 'investor',
+          avatar: 'https://images.pexels.com/photos/834863/pexels-photo-834863.jpeg',
+          bio: 'Healthcare-focused investor with medical background. Looking for innovations in patient care and biotech.',
+          investmentFocus: ['HealthTech', 'BioTech', 'Medical Devices'],
+          minInvestment: 1000000,
+          maxInvestment: 5000000,
+          location: 'Boston, MA'
+        },
+        e1: {
+          id: 'e1',
+          name: 'Sarah Johnson',
+          email: 'sarah@techwave.io',
+          role: 'entrepreneur',
+          avatar: 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg',
+          bio: 'Serial entrepreneur with 10+ years of experience in SaaS and fintech.',
+          startupName: 'TechWave AI',
+          industry: 'FinTech',
+          fundingStage: 'seed',
+          location: 'San Francisco, CA'
+        },
+        e2: {
+          id: 'e2',
+          name: 'David Chen',
+          email: 'david@greenlife.co',
+          role: 'entrepreneur',
+          avatar: 'https://images.pexels.com/photos/614810/pexels-photo-614810.jpeg',
+          bio: 'Environmental scientist turned entrepreneur. Passionate about sustainable solutions.',
+          startupName: 'GreenLife Solutions',
+          industry: 'CleanTech',
+          fundingStage: 'seed',
+          location: 'Portland, OR'
+        },
+        e3: {
+          id: 'e3',
+          name: 'Maya Patel',
+          email: 'maya@healthpulse.com',
+          role: 'entrepreneur',
+          avatar: 'https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg',
+          bio: 'Former healthcare professional with an MBA. Building tech to improve patient care.',
+          startupName: 'HealthPulse',
+          industry: 'HealthTech',
+          fundingStage: 'seed',
+          location: 'Boston, MA'
+        },
+        e4: {
+          id: 'e4',
+          name: 'James Wilson',
+          email: 'james@urbanfarm.io',
+          role: 'entrepreneur',
+          avatar: 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg',
+          bio: 'Agricultural engineer focused on urban farming solutions and food security.',
+          startupName: 'UrbanFarm',
+          industry: 'AgTech',
+          fundingStage: 'seed',
+          location: 'Chicago, IL'
+        }
+      };
+
+      return res.json({ success: true, user: mockUsers[id] });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({ message: 'Invalid user ID format' });
     }
-    const user = await User.findById(req.params.id).select('-password');
+    const user = await User.findById(id).select('-password');
     if (!user) return res.status(404).json({ message: 'User not found' });
     res.json({ success: true, user });
   } catch (error) {

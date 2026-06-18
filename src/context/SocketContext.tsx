@@ -11,7 +11,14 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (user && token) {
-      const socketUrl = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
+      let socketUrl = import.meta.env.VITE_SOCKET_URL;
+      if (!socketUrl && import.meta.env.VITE_API_URL) {
+        socketUrl = import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '');
+      }
+      if (!socketUrl) {
+        socketUrl = 'http://localhost:5000';
+      }
+
       const newSocket = io(socketUrl, {
         auth: { token }
       });
