@@ -1,16 +1,61 @@
-import React from 'react';
-import { User, Lock, Bell, Globe, Palette, CreditCard } from 'lucide-react';
+import React, { useState } from 'react';
+import { User as UserIcon, Lock, Bell, Globe, Palette, CreditCard, Save } from 'lucide-react';
 import { Card, CardHeader, CardBody } from '../../components/ui/Card';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import { Avatar } from '../../components/ui/Avatar';
 import { useAuth } from '../../context/AuthContext';
+import toast from 'react-hot-toast';
 
 export const SettingsPage: React.FC = () => {
-  const { user } = useAuth();
+  const { user, updateProfile } = useAuth();
+  
+  // Basic states
+  const [name, setName] = useState(user?.name || '');
+  const [location, setLocation] = useState(user?.location || '');
+  const [bio, setBio] = useState(user?.bio || '');
+  
+  // Entrepreneur specific states
+  const [startupName, setStartupName] = useState((user as any)?.startupName || '');
+  const [industry, setIndustry] = useState((user as any)?.industry || '');
+  
+  // Investor specific states
+  const [firm, setFirm] = useState((user as any)?.firm || '');
+  const [minInvestment, setMinInvestment] = useState((user as any)?.minInvestment || '');
+  const [maxInvestment, setMaxInvestment] = useState((user as any)?.maxInvestment || '');
+
+  const [isSaving, setIsSaving] = useState(false);
   
   if (!user) return null;
+
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSaving(true);
+    
+    try {
+      const updates: any = {
+        name,
+        location,
+        bio,
+      };
+
+      if (user.role === 'entrepreneur') {
+        updates.startupName = startupName;
+        updates.industry = industry;
+      } else if (user.role === 'investor') {
+        updates.firm = firm;
+        if (minInvestment !== '') updates.minInvestment = Number(minInvestment);
+        if (maxInvestment !== '') updates.maxInvestment = Number(maxInvestment);
+      }
+
+      await updateProfile(user.id, updates);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to save changes');
+    } finally {
+      setIsSaving(false);
+    }
+  };
   
   return (
     <div className="space-y-6 animate-fade-in">
@@ -25,7 +70,7 @@ export const SettingsPage: React.FC = () => {
           <CardBody className="p-2">
             <nav className="space-y-1">
               <button className="flex items-center w-full px-3 py-2 text-sm font-medium text-primary-700 bg-primary-50 rounded-md">
-                <User size={18} className="mr-3" />
+                <UserIcon size={18} className="mr-3" />
                 Profile
               </button>
               
@@ -64,63 +109,111 @@ export const SettingsPage: React.FC = () => {
             <CardHeader>
               <h2 className="text-lg font-medium text-gray-900">Profile Settings</h2>
             </CardHeader>
-            <CardBody className="space-y-6">
-              <div className="flex items-center gap-6">
-                <Avatar
-                  src={user.avatarUrl}
-                  alt={user.name}
-                  size="xl"
-                />
+            <CardBody>
+              <form onSubmit={handleSaveProfile} className="space-y-6">
+                <div className="flex items-center gap-6">
+                  <Avatar
+                    src={user.avatarUrl}
+                    alt={user.name}
+                    size="xl"
+                  />
+                  
+                  <div>
+                    <Button type="button" variant="outline" size="sm">
+                      Change Photo
+                    </Button>
+                    <p className="mt-2 text-sm text-gray-500">
+                      JPG, GIF or PNG. Max size of 800K
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <Input
+                    label="Full Name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    required
+                  />
+                  
+                  <Input
+                    label="Email"
+                    type="email"
+                    value={user.email}
+                    disabled
+                  />
+                  
+                  <Input
+                    label="Role"
+                    value={user.role}
+                    disabled
+                  />
+                  
+                  <Input
+                    label="Location"
+                    value={location}
+                    onChange={(e) => setLocation(e.target.value)}
+                  />
+
+                  {user.role === 'entrepreneur' && (
+                    <>
+                      <Input
+                        label="Startup Name"
+                        value={startupName}
+                        onChange={(e) => setStartupName(e.target.value)}
+                      />
+                      <Input
+                        label="Industry"
+                        value={industry}
+                        onChange={(e) => setIndustry(e.target.value)}
+                      />
+                    </>
+                  )}
+
+                  {user.role === 'investor' && (
+                    <>
+                      <Input
+                        label="Firm / Organization"
+                        value={firm}
+                        onChange={(e) => setFirm(e.target.value)}
+                      />
+                      <div className="grid grid-cols-2 gap-2">
+                        <Input
+                          label="Min Investment ($)"
+                          type="number"
+                          value={minInvestment}
+                          onChange={(e) => setMinInvestment(e.target.value)}
+                        />
+                        <Input
+                          label="Max Investment ($)"
+                          type="number"
+                          value={maxInvestment}
+                          onChange={(e) => setMaxInvestment(e.target.value)}
+                        />
+                      </div>
+                    </>
+                  )}
+                </div>
                 
                 <div>
-                  <Button variant="outline" size="sm">
-                    Change Photo
-                  </Button>
-                  <p className="mt-2 text-sm text-gray-500">
-                    JPG, GIF or PNG. Max size of 800K
-                  </p>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Bio
+                  </label>
+                  <textarea
+                    className="w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+                    rows={4}
+                    value={bio}
+                    onChange={(e) => setBio(e.target.value)}
+                  ></textarea>
                 </div>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Input
-                  label="Full Name"
-                  defaultValue={user.name}
-                />
                 
-                <Input
-                  label="Email"
-                  type="email"
-                  defaultValue={user.email}
-                />
-                
-                <Input
-                  label="Role"
-                  value={user.role}
-                  disabled
-                />
-                
-                <Input
-                  label="Location"
-                  defaultValue="San Francisco, CA"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Bio
-                </label>
-                <textarea
-                  className="w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
-                  rows={4}
-                  defaultValue={user.bio}
-                ></textarea>
-              </div>
-              
-              <div className="flex justify-end gap-3">
-                <Button variant="outline">Cancel</Button>
-                <Button>Save Changes</Button>
-              </div>
+                <div className="flex justify-end gap-3">
+                  <Button type="button" variant="outline">Cancel</Button>
+                  <Button type="submit" isLoading={isSaving} leftIcon={<Save size={18} />}>
+                    Save Changes
+                  </Button>
+                </div>
+              </form>
             </CardBody>
           </Card>
           
